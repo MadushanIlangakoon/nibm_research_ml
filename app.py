@@ -6,7 +6,7 @@ from general_questions import general_questions
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-CORS(app, resources={r"/inference/*": {"origins": "http://localhost:3000"}})
+CORS(app, resources={r"/inference/*": {"origins": "https://nibm-research-frontend.onrender.com"}})
 
 # Register blueprints
 app.register_blueprint(inference_bp, url_prefix='/inference')
