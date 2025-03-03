@@ -8,7 +8,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 CORS(app, resources={r"/inference/*": {"origins": "https://nibm-research-frontend.onrender.com"}})
 
-# Register blueprints
+# Register blueprint
 app.register_blueprint(inference_bp, url_prefix='/inference')
 app.register_blueprint(general_questions, url_prefix='/general_questions')
 app.register_blueprint(test_questions, url_prefix='/test_questions')
