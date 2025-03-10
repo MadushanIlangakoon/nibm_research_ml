@@ -9,10 +9,15 @@ from scipy.spatial import distance as dist
 from flask import Blueprint, request
 import tempfile
 import pandas as pd
+import threading
+import glob
+import time
+
+# Import the continuous learning function from continuous_training.py
+from continuous_training import continuous_training
 
 # Create the blueprint
 test_questions = Blueprint('test_questions', __name__)
-
 
 # Blink and Gaze Detection Functions
 
@@ -53,7 +58,6 @@ def get_eye_region_from_landmarks(landmarks, indices, frame_width, frame_height)
         coords.append((x, y))
     return np.array(coords, np.int32)
 
-
 # MediaPipe Face Mesh Initialization
 
 mp_face_mesh = mp.solutions.face_mesh
@@ -62,7 +66,6 @@ face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, refi
 # Define eye landmark indices (for blink/gaze detection)
 left_eye_indices = [33, 160, 158, 133, 153, 144]
 right_eye_indices = [362, 385, 387, 263, 373, 380]
-
 
 # Video Processing Function
 
@@ -124,7 +127,6 @@ def process_video_with_blink_and_gaze(video_path):
     video_duration = frame_count / fps  # total duration in seconds
 
     return avg_landmarks, blink_count, gaze_duration, video_duration
-
 
 # Movement Statistics Functions
 
@@ -244,8 +246,28 @@ def upload_video():
     desired_order = metadata_cols + landmark_cols + movement_cols + extra_cols
 
     df = df.reindex(columns=desired_order)
-    csv_filename = "../TempTestQuestionsData.csv"
+
+    # Save CSV to GeneralCsv folder with filename as student_id
+    output_folder = "GeneralCsv"
+    os.makedirs(output_folder, exist_ok=True)
+    if "student_id" in df.columns and not df["student_id"].empty and pd.notnull(df["student_id"].iloc[0]):
+        student_id = df["student_id"].iloc[0]
+    else:
+        student_id = "default"
+    csv_filename = os.path.join(output_folder, f"{student_id}.csv")
     df.to_csv(csv_filename, index=False)
     print("Results saved to CSV:")
     print(df)
+
+    # Trigger continuous training if threshold is met
+    THRESHOLD = 10
+    csv_files = glob.glob(os.path.join(output_folder, "*.csv"))
+    print(f"Found {len(csv_files)} CSV files in '{output_folder}'.")
+    if len(csv_files) >= THRESHOLD:
+        print("Threshold reached. Triggering continuous training process...")
+        thread = threading.Thread(target=continuous_learning, args=(output_folder,))
+        thread.start()
+    else:
+        print(f"Waiting for more CSV files. Threshold: {THRESHOLD}")
+
     return "Results saved to " + csv_filename, 200
